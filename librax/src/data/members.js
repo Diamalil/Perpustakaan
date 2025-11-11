@@ -2,16 +2,16 @@ export const members = [
   {
     id: 1,
     memberCode: "M001",
-    name: "Andi Wijaya",
-    email: "andi.wijaya@email.com",
-    phone: "081234567890",
-    address: "Jl. Merdeka No. 123, Jakarta Selatan",
-    joinDate: "2024-01-10",
+    name: "Nirmala Embun Nakisshya",
+    email: "NirmalaEmbun@email.com",
+    phone: "089614518589",
+    address: "Jl. Cimanglid No. 34, Ciapus",
+    joinDate: "2024-11-10",
     status: "active",
     borrowedBooks: 2,
     maxBorrowLimit: 3,
-    birthDate: "1998-05-15",
-    occupation: "Mahasiswa"
+    birthDate: "2010-05-08",
+    occupation: "Pelajar"
   },
   {
     id: 2,

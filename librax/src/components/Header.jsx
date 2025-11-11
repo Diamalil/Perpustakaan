@@ -5,23 +5,25 @@ import React, { useState } from 'react';
  * Muncul di semua halaman untuk navigasi
  * 
  * Props:
+ * - currentPage: Halaman yang sedang aktif
+ * - setCurrentPage: Fungsi untuk mengubah halaman
  * - title: Judul aplikasi
  * - user: Data user yang login (optional)
  */
-const Header = ({ title = "Perpustakaan Digital", user = null }) => {
+const Header = ({ currentPage, setCurrentPage, title = "Perpustakaan Digital", user = null }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Menu navigasi
   const menuItems = [
-    { path: '/', label: 'Dashboard', icon: '📊' },
-    { path: '/books', label: 'Katalog Buku', icon: '📚' },
-    { path: '/borrowings', label: 'Peminjaman', icon: '📋' },
-    { path: '/members', label: 'Anggota', icon: '👥' },
+    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+    { id: 'books', label: 'Katalog Buku', icon: '📚' },
+    { id: 'borrowings', label: 'Peminjaman', icon: '📋' },
+    { id: 'members', label: 'Anggota', icon: '👥' },
   ];
 
-  // Cek apakah menu aktif (hardcode untuk sekarang)
-  const isActive = (path) => {
-    return path === '/dashboard';
+  // Cek apakah menu aktif
+  const isActive = (pageId) => {
+    return currentPage === pageId;
   };
 
   return (
@@ -38,18 +40,18 @@ const Header = ({ title = "Perpustakaan Digital", user = null }) => {
           {/* Desktop Menu */}
           <nav className="hidden md:flex space-x-6">
             {menuItems.map((item) => (
-              <a
-                key={item.path}
-                href={item.path}
+              <button
+                key={item.id}
+                onClick={() => setCurrentPage(item.id)}
                 className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive(item.path)
+                  isActive(item.id)
                     ? 'bg-blue-700 text-white'
                     : 'text-blue-100 hover:bg-blue-500 hover:text-white'
                 }`}
               >
                 <span>{item.icon}</span>
                 <span>{item.label}</span>
-              </a>
+              </button>
             ))}
           </nav>
 
@@ -89,19 +91,21 @@ const Header = ({ title = "Perpustakaan Digital", user = null }) => {
           <div className="md:hidden py-4 border-t border-blue-500">
             <nav className="flex flex-col space-y-2">
               {menuItems.map((item) => (
-                <a
-                  key={item.path}
-                  href={item.path}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={`flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive(item.path)
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setCurrentPage(item.id)
+                    setIsMenuOpen(false)
+                  }}
+                  className={`flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left w-full ${
+                    isActive(item.id)
                       ? 'bg-blue-700 text-white'
                       : 'text-blue-100 hover:bg-blue-500 hover:text-white'
                   }`}
                 >
                   <span>{item.icon}</span>
                   <span>{item.label}</span>
-                </a>
+                </button>
               ))}
             </nav>
           </div>
