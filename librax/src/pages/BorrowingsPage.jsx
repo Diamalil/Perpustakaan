@@ -1,46 +1,62 @@
 import React, { useState, useEffect } from 'react';
-import { useBorrowings, useBooks, useMembers } from '../hooks/useDatabase';
+import { useDatabase, useBorrowings, useBooks, useMembers } from '../hooks/useDatabase';
 
 const BorrowingsPage = () => {
+  // Pastikan database terinisialisasi
+  useDatabase();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const { borrowings, isLoading, error, refreshBorrowings } = useBorrowings();
+  const { borrowings, isLoading, error, refreshBorrowings, returnBook } = useBorrowings();
   const { books } = useBooks();
   const { members } = useMembers();
   const [borrowingDetails, setBorrowingDetails] = useState([]);
   const [filteredBorrowings, setFilteredBorrowings] = useState([]);
+  const [actionLoadingId, setActionLoadingId] = useState(null);
 
   // Gabungkan data peminjaman dengan informasi buku dan anggota
   useEffect(() => {
-    if (borrowings && books && members) {
-      const details = borrowings.map(borrowing => {
-        const book = books.find(b => b.id === borrowing.bookId);
-        const member = members.find(m => m.id === borrowing.memberId);
-        return {
-          ...borrowing,
-          bookTitle: book?.title || 'Buku tidak ditemukan',
-          memberName: member?.name || 'Anggota tidak ditemukan',
-          memberCode: member?.memberCode || '-',
-          isOverdue: new Date(borrowing.dueDate) < new Date() && borrowing.status === 'borrowed'
-        };
-      });
-      setBorrowingDetails(details);
+    if (!Array.isArray(borrowings) || borrowings.length === 0) {
+      setBorrowingDetails([]);
+      return;
     }
+
+    const now = new Date();
+    const details = borrowings.map(b => {
+      const book = books?.find(book => book.id === b.bookId);
+      const member = members?.find(m => m.id === b.memberId);
+      const dueDate = b?.dueDate ? new Date(b.dueDate) : null;
+      const isOverdue = !!(dueDate && b.status === 'borrowed' && dueDate < now);
+      return {
+        ...b,
+        bookTitle: book?.title || 'Buku tidak ditemukan',
+        memberName: member?.name || 'Anggota tidak ditemukan',
+        memberCode: member?.memberCode || '-',
+        borrowingCode: b?.borrowingCode || (b?.id ? String(b.id) : '-'),
+        isOverdue
+      };
+    });
+    setBorrowingDetails(details);
   }, [borrowings, books, members]);
 
   // Filter peminjaman berdasarkan pencarian dan status
   useEffect(() => {
-    if (borrowingDetails.length > 0) {
-      const filtered = borrowingDetails.filter(borrowing => {
-        const matchesSearch = borrowing.bookTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             borrowing.memberName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             borrowing.memberCode.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = selectedStatus === 'all' || borrowing.status === selectedStatus;
-        
-        return matchesSearch && matchesStatus;
-      });
-      setFilteredBorrowings(filtered);
-    }
+    const term = searchTerm.trim().toLowerCase();
+    const filtered = borrowingDetails.filter(b => {
+      const matchesSearch =
+        !term ||
+        (b.bookTitle || '').toLowerCase().includes(term) ||
+        (b.memberName || '').toLowerCase().includes(term) ||
+        (b.memberCode || '').toLowerCase().includes(term) ||
+        (b.borrowingCode || '').toLowerCase().includes(term);
+
+      const matchesStatus =
+        selectedStatus === 'all' ||
+        (selectedStatus === 'overdue' ? b.isOverdue : (b.status || '').toLowerCase() === selectedStatus.toLowerCase());
+
+      return matchesSearch && matchesStatus;
+    });
+    setFilteredBorrowings(filtered);
   }, [borrowingDetails, searchTerm, selectedStatus]);
 
   const getStatusColor = (status) => {
@@ -57,12 +73,28 @@ const BorrowingsPage = () => {
       case 'borrowed': return 'Dipinjam';
       case 'returned': return 'Dikembalikan';
       case 'overdue': return 'Terlambat';
-      default: return status;
+      default: return status || '-';
     }
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('id-ID');
+    if (!dateString) return '-';
+    const d = new Date(dateString);
+    if (Number.isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString('id-ID');
+  };
+
+  const handleReturn = async (id) => {
+    try {
+      setActionLoadingId(id);
+      await returnBook(id);
+      await refreshBorrowings();
+    } catch (e) {
+      console.error(e);
+      alert('Gagal memproses pengembalian. Silakan coba lagi.');
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
   return (
@@ -70,8 +102,8 @@ const BorrowingsPage = () => {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Manajemen Peminjaman</h1>
-            <p className="text-sm text-gray-600">Kelola transaksi peminjaman dan pengembalian buku</p>
+            <h1 className="text-2xl font-bold text-gray-900">Manajemen Peminjaman</h1>
+            <p className="text-gray-700">Kelola transaksi peminjaman dan pengembalian buku</p>
           </div>
           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
             + Peminjaman Baru
@@ -168,67 +200,56 @@ const BorrowingsPage = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Kode Peminjaman
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Buku
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Anggota
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tanggal Pinjam
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tanggal Kembali
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Aksi
-                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kode Peminjaman</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buku</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Anggota</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Pinjam</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Kembali</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredBorrowings.map((borrowing) => (
-                    <tr key={borrowing.id} className={`hover:bg-gray-50 ${borrowing.isOverdue ? 'bg-red-50' : ''}`}>
+                  {filteredBorrowings.map((b) => (
+                    <tr key={b.id} className={`hover:bg-gray-50 ${b.isOverdue ? 'bg-red-50' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {borrowing.borrowingCode}
+                        {b.borrowingCode}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{borrowing.bookTitle}</div>
+                        <div className="text-sm font-medium text-gray-900">{b.bookTitle}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{borrowing.memberName}</div>
-                        <div className="text-sm text-gray-500">{borrowing.memberCode}</div>
+                        <div className="text-sm font-medium text-gray-900">{b.memberName}</div>
+                        <div className="text-sm text-gray-500">{b.memberCode}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(borrowing.borrowDate)}
+                        {formatDate(b.borrowDate)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(borrowing.dueDate)}
-                        {borrowing.isOverdue && (
+                        {formatDate(b.dueDate)}
+                        {b.isOverdue && (
                           <div className="text-xs text-red-600 mt-1">
-                            Terlambat {Math.ceil((new Date() - new Date(borrowing.dueDate)) / (1000 * 60 * 60 * 24))} hari
+                            Terlambat {Math.ceil((new Date() - new Date(b.dueDate)) / (1000 * 60 * 60 * 24))} hari
                           </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          borrowing.isOverdue ? 'bg-red-100 text-red-800' : getStatusColor(borrowing.status)
+                          b.isOverdue ? 'bg-red-100 text-red-800' : getStatusColor(b.status)
                         }`}>
-                          {borrowing.isOverdue ? 'Terlambat' : getStatusLabel(borrowing.status)}
+                          {b.isOverdue ? 'Terlambat' : getStatusLabel(b.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {borrowing.status === 'borrowed' && (
-                          <button className="text-green-600 hover:text-green-900">
-                            Proses Pengembalian
+                        {b.status === 'borrowed' ? (
+                          <button
+                            className={`text-green-600 hover:text-green-900 ${actionLoadingId === b.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            onClick={() => handleReturn(b.id)}
+                            disabled={actionLoadingId === b.id}
+                          >
+                            {actionLoadingId === b.id ? 'Memproses...' : 'Proses Pengembalian'}
                           </button>
-                        )}
-                        {borrowing.status === 'returned' && (
+                        ) : (
                           <span className="text-gray-500">Selesai</span>
                         )}
                       </td>

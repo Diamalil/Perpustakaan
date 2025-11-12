@@ -27,8 +27,8 @@ const Header = ({ currentPage, setCurrentPage, title = "Perpustakaan Digital", u
   };
 
   return (
-    <header className="bg-blue-600 text-white shadow-lg">
-      <div className="container mx-auto px-4">
+    <header className="bg-blue-600 text-white shadow-lg ">
+      <div className="container rounded-xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           
           {/* Logo & Title */}

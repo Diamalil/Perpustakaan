@@ -17,7 +17,7 @@ const Charts = ({ data = [] }) => {
             <div key={d.month} className="flex flex-col items-center group cursor-pointer">
               <div className="relative">
                 <div
-                  className="w-8 bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-lg shadow-sm hover:from-blue-700 hover:to-blue-500 transition-all duration-200 hover:shadow-md"
+                  className="w-8 bg-gradient-to-top from-blue-600 to-blue-400 rounded-t-lg shadow-sm hover:from-blue-700 hover:to-blue-500 transition-all duration-200 hover:shadow-md"
                   style={{ height: `${height}px` }}
                   title={`${d.month}: ${d.value} peminjaman`}
                 />

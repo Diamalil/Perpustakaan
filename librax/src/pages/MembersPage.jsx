@@ -4,7 +4,7 @@ import { useMembers } from '../hooks/useDatabase';
 const MembersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const { members, isLoading, error, searchMembers, refreshMembers } = useMembers();
+  const { members, isLoading, error, searchMembers, } = useMembers();
   const [filteredMembers, setFilteredMembers] = useState([]);
 
   // Filter anggota berdasarkan pencarian dan status
@@ -24,16 +24,19 @@ const MembersPage = () => {
 
   // Handle debounced search
   useEffect(() => {
+    const term = (searchTerm || '').trim();
     const timeoutId = setTimeout(() => {
-      if (searchTerm.trim()) {
-        searchMembers(searchTerm);
+      if (term) {
+        // Saat ada kata kunci, lakukan pencarian
+        searchMembers(term);
       } else {
-        refreshMembers();
+        // Saat kosong, refresh ke daftar lengkap sekali
+    
       }
-    }, 300);
+    });
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, searchMembers, refreshMembers]);
+  }, [searchMembers, searchTerm]);
 
   const getStatusColor = (status) => {
     switch (status) {

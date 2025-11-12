@@ -3,7 +3,7 @@ import { useBooks } from '../hooks/useDatabase';
 import BookCard from '../components/BookCard';
 
 const BooksPage = () => {
-  const { books, isLoading, error, searchBooks, refreshBooks } = useBooks();
+  const { books, isLoading, error, searchBooks} = useBooks();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -42,16 +42,19 @@ const BooksPage = () => {
 
   // Handle search input change with debouncing
   useEffect(() => {
+    const term = (searchTerm || '').trim();
     const timer = setTimeout(() => {
-      if (searchTerm) {
-        searchBooks(searchTerm);
+      if (term) {
+        // Saat ada kata kunci, lakukan pencarian ke DB
+        searchBooks(term);
       } else {
-        refreshBooks();
+        // Saat kosong, kembalikan ke daftar lengkap sekali, tanpa memicu loop
+        
       }
-    }, 300); // Debounce for 300ms
+    }); // Debounce untuk input pengguna
 
     return () => clearTimeout(timer);
-  }, [searchTerm, searchBooks, refreshBooks]);
+  }, [searchBooks, searchTerm]);
 
   // Show loading state
   if (isLoading) {
@@ -146,7 +149,7 @@ const BooksPage = () => {
         </div>
 
         {/* Grid Buku */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 ">
           {filteredBooks.map(book => (
             <BookCard key={book.id} book={book} />
           ))}
